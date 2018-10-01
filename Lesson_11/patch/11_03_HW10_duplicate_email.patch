@@ -1,0 +1,149 @@
+Index: config/messages/app.properties
+IDEA additional info:
+Subsystem: com.intellij.openapi.diff.impl.patch.CharsetEP
+<+>UTF-8
+===================================================================
+--- config/messages/app.properties	(date 1536791000000)
++++ config/messages/app.properties	(date 1536791006358)
+@@ -36,5 +36,7 @@
+ common.disabled=Record disabled
+ common.errorStatus=Error status
+ common.appError=Application error
++
++exception.user.duplicateEmail=User with this email already exists
+ common.save=Save
+ common.cancel=Cancel
+\ No newline at end of file
+Index: src/main/java/ru/javawebinar/topjava/web/user/AdminAjaxController.java
+IDEA additional info:
+Subsystem: com.intellij.openapi.diff.impl.patch.CharsetEP
+<+>UTF-8
+===================================================================
+--- src/main/java/ru/javawebinar/topjava/web/user/AdminAjaxController.java	(date 1536791000000)
++++ src/main/java/ru/javawebinar/topjava/web/user/AdminAjaxController.java	(date 1536791110303)
+@@ -1,11 +1,16 @@
+ package ru.javawebinar.topjava.web.user;
+ 
++import org.springframework.beans.factory.annotation.Autowired;
++import org.springframework.context.MessageSource;
++import org.springframework.context.i18n.LocaleContextHolder;
++import org.springframework.dao.DataIntegrityViolationException;
+ import org.springframework.http.HttpStatus;
+ import org.springframework.http.MediaType;
+ import org.springframework.web.bind.annotation.*;
+ import ru.javawebinar.topjava.model.User;
+ import ru.javawebinar.topjava.to.UserTo;
+ import ru.javawebinar.topjava.util.UserUtil;
++import ru.javawebinar.topjava.util.exception.IllegalRequestDataException;
+ 
+ import javax.validation.Valid;
+ import java.util.List;
+@@ -14,6 +19,9 @@
+ @RequestMapping("/ajax/admin/users")
+ public class AdminAjaxController extends AbstractUserController {
+ 
++    @Autowired
++    private MessageSource messageSource;
++
+     @Override
+     @GetMapping(produces = MediaType.APPLICATION_JSON_VALUE)
+     public List<User> getAll() {
+@@ -35,10 +43,14 @@
+ 
+     @PostMapping
+     public void createOrUpdate(@Valid UserTo userTo) {
+-        if (userTo.isNew()) {
+-            super.create(UserUtil.createNewFromTo(userTo));
+-        } else {
+-            super.update(userTo, userTo.getId());
++        try {
++            if (userTo.isNew()) {
++                super.create(UserUtil.createNewFromTo(userTo));
++            } else {
++                super.update(userTo, userTo.getId());
++            }
++        } catch (DataIntegrityViolationException e) {
++            throw new IllegalRequestDataException(messageSource.getMessage(EXCEPTION_DUPLICATE_EMAIL, null, LocaleContextHolder.getLocale()));
+         }
+     }
+ 
+Index: config/messages/app_ru.properties
+IDEA additional info:
+Subsystem: com.intellij.openapi.diff.impl.patch.CharsetEP
+<+>UTF-8
+===================================================================
+--- config/messages/app_ru.properties	(date 1536791000000)
++++ config/messages/app_ru.properties	(date 1536791006366)
+@@ -36,5 +36,7 @@
+ common.disabled=Запись деактивирована
+ common.errorStatus=Статус ошибки
+ common.appError=Ошибка приложения
++
++exception.user.duplicateEmail=Пользователь с такой почтой уже есть в приложении
+ common.save=Сохранить
+ common.cancel=Отменить
+\ No newline at end of file
+Index: src/main/java/ru/javawebinar/topjava/web/RootController.java
+IDEA additional info:
+Subsystem: com.intellij.openapi.diff.impl.patch.CharsetEP
+<+>UTF-8
+===================================================================
+--- src/main/java/ru/javawebinar/topjava/web/RootController.java	(date 1536791000000)
++++ src/main/java/ru/javawebinar/topjava/web/RootController.java	(date 1536791045393)
+@@ -1,5 +1,6 @@
+ package ru.javawebinar.topjava.web;
+ 
++import org.springframework.dao.DataIntegrityViolationException;
+ import org.springframework.security.access.prepost.PreAuthorize;
+ import org.springframework.stereotype.Controller;
+ import org.springframework.ui.ModelMap;
+@@ -47,11 +48,15 @@
+     public String updateProfile(@Valid UserTo userTo, BindingResult result, SessionStatus status) {
+         if (result.hasErrors()) {
+             return "profile";
+-        } else {
++        }
++        try {
+             super.update(userTo, SecurityUtil.authUserId());
+             SecurityUtil.get().update(userTo);
+             status.setComplete();
+             return "redirect:meals";
++        } catch (DataIntegrityViolationException ex) {
++            result.rejectValue("email", EXCEPTION_DUPLICATE_EMAIL);
++            return "profile";
+         }
+     }
+ 
+@@ -67,10 +72,15 @@
+         if (result.hasErrors()) {
+             model.addAttribute("register", true);
+             return "profile";
+-        } else {
++        }
++        try {
+             super.create(UserUtil.createNewFromTo(userTo));
+             status.setComplete();
+             return "redirect:login?message=app.registered&username=" + userTo.getEmail();
++        } catch (DataIntegrityViolationException ex) {
++            result.rejectValue("email", EXCEPTION_DUPLICATE_EMAIL);
++            model.addAttribute("register", true);
++            return "profile";
+         }
+     }
+ }
+Index: src/main/java/ru/javawebinar/topjava/web/user/AbstractUserController.java
+IDEA additional info:
+Subsystem: com.intellij.openapi.diff.impl.patch.CharsetEP
+<+>UTF-8
+===================================================================
+--- src/main/java/ru/javawebinar/topjava/web/user/AbstractUserController.java	(date 1536791000000)
++++ src/main/java/ru/javawebinar/topjava/web/user/AbstractUserController.java	(date 1536791006394)
+@@ -15,6 +15,8 @@
+ public abstract class AbstractUserController {
+     protected final Logger log = LoggerFactory.getLogger(getClass());
+ 
++    public static final String EXCEPTION_DUPLICATE_EMAIL = "exception.user.duplicateEmail";
++
+     @Autowired
+     private UserService service;
+ 

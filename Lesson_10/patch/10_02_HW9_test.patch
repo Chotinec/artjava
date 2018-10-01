@@ -1,0 +1,131 @@
+Index: src/test/java/ru/javawebinar/topjava/web/meal/MealRestControllerTest.java
+IDEA additional info:
+Subsystem: com.intellij.openapi.diff.impl.patch.CharsetEP
+<+>UTF-8
+===================================================================
+--- src/test/java/ru/javawebinar/topjava/web/meal/MealRestControllerTest.java	(date 1535982634000)
++++ src/test/java/ru/javawebinar/topjava/web/meal/MealRestControllerTest.java	(date 1535982684701)
+@@ -18,8 +18,10 @@
+ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.content;
+ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
+ import static ru.javawebinar.topjava.MealTestData.*;
++import static ru.javawebinar.topjava.MealTestData.assertMatch;
++import static ru.javawebinar.topjava.TestUtil.contentJson;
+ import static ru.javawebinar.topjava.TestUtil.*;
+-import static ru.javawebinar.topjava.UserTestData.USER;
++import static ru.javawebinar.topjava.UserTestData.*;
+ import static ru.javawebinar.topjava.model.AbstractBaseEntity.START_SEQ;
+ 
+ class MealRestControllerTest extends AbstractControllerTest {
+@@ -31,16 +33,24 @@
+ 
+     @Test
+     void testGet() throws Exception {
+-        mockMvc.perform(get(REST_URL + MEAL1_ID))
++        mockMvc.perform(get(REST_URL + ADMIN_MEAL_ID)
++                .with(userHttpBasic(ADMIN)))
+                 .andExpect(status().isOk())
+                 .andDo(print())
+                 .andExpect(content().contentTypeCompatibleWith(MediaType.APPLICATION_JSON))
+-                .andExpect(contentJson(MEAL1));
++                .andExpect(contentJson(ADMIN_MEAL1));
++    }
++
++    @Test
++    public void testGetUnauth() throws Exception {
++        mockMvc.perform(get(REST_URL + MEAL1_ID))
++                .andExpect(status().isUnauthorized());
+     }
+ 
+     @Test
+     void testDelete() throws Exception {
+-        mockMvc.perform(delete(REST_URL + MEAL1_ID))
++        mockMvc.perform(delete(REST_URL + MEAL1_ID)
++                .with(userHttpBasic(USER)))
+                 .andExpect(status().isNoContent());
+         assertMatch(service.getAll(START_SEQ), MEAL6, MEAL5, MEAL4, MEAL3, MEAL2);
+     }
+@@ -49,8 +59,10 @@
+     void testUpdate() throws Exception {
+         Meal updated = getUpdated();
+ 
+-        mockMvc.perform(put(REST_URL + MEAL1_ID).contentType(MediaType.APPLICATION_JSON)
+-                .content(JsonUtil.writeValue(updated)))
++        mockMvc.perform(put(REST_URL + MEAL1_ID)
++                .contentType(MediaType.APPLICATION_JSON)
++                .content(JsonUtil.writeValue(updated))
++                .with(userHttpBasic(USER)))
+                 .andExpect(status().isOk());
+ 
+         assertMatch(service.get(MEAL1_ID, START_SEQ), updated);
+@@ -61,18 +73,20 @@
+         Meal created = getCreated();
+         ResultActions action = mockMvc.perform(post(REST_URL)
+                 .contentType(MediaType.APPLICATION_JSON)
+-                .content(JsonUtil.writeValue(created)));
++                .content(JsonUtil.writeValue(created))
++                .with(userHttpBasic(ADMIN)));
+ 
+         Meal returned = readFromJson(action, Meal.class);
+         created.setId(returned.getId());
+ 
+         assertMatch(returned, created);
+-        assertMatch(service.getAll(START_SEQ), created, MEAL6, MEAL5, MEAL4, MEAL3, MEAL2, MEAL1);
++        assertMatch(service.getAll(ADMIN_ID), ADMIN_MEAL2, created, ADMIN_MEAL1);
+     }
+ 
+     @Test
+     void testGetAll() throws Exception {
+-        mockMvc.perform(get(REST_URL))
++        mockMvc.perform(get(REST_URL)
++                .with(userHttpBasic(USER)))
+                 .andExpect(status().isOk())
+                 .andDo(print())
+                 .andExpect(content().contentTypeCompatibleWith(MediaType.APPLICATION_JSON))
+@@ -82,7 +96,8 @@
+     public void testFilter() throws Exception {
+         mockMvc.perform(get(REST_URL + "filter")
+                 .param("startDate", "2015-05-30").param("startTime", "07:00")
+-                .param("endDate", "2015-05-31").param("endTime", "11:00"))
++                .param("endDate", "2015-05-31").param("endTime", "11:00")
++                .with(userHttpBasic(USER)))
+                 .andExpect(status().isOk())
+                 .andDo(print())
+                 .andExpect(contentJsonArray(
+@@ -92,7 +107,8 @@
+ 
+     @Test
+     public void testFilterAll() throws Exception {
+-        mockMvc.perform(get(REST_URL + "filter?startDate=&endTime="))
++        mockMvc.perform(get(REST_URL + "filter?startDate=&endTime=")
++                .with(userHttpBasic(USER)))
+                 .andExpect(status().isOk())
+                 .andDo(print())
+                 .andExpect(contentJson(MealsUtil.getWithExceeded(Arrays.asList(MEAL6, MEAL5, MEAL4, MEAL3, MEAL2, MEAL1), USER.getCaloriesPerDay())));
+Index: src/test/java/ru/javawebinar/topjava/web/RootControllerTest.java
+IDEA additional info:
+Subsystem: com.intellij.openapi.diff.impl.patch.CharsetEP
+<+>UTF-8
+===================================================================
+--- src/test/java/ru/javawebinar/topjava/web/RootControllerTest.java	(date 1535982634000)
++++ src/test/java/ru/javawebinar/topjava/web/RootControllerTest.java	(date 1535982912995)
+@@ -1,8 +1,6 @@
+ package ru.javawebinar.topjava.web;
+ 
+ import org.junit.jupiter.api.Test;
+-import ru.javawebinar.topjava.MealTestData;
+-import ru.javawebinar.topjava.util.MealsUtil;
+ 
+ import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
+ import static org.springframework.test.web.servlet.result.MockMvcResultHandlers.print;
+@@ -37,8 +35,6 @@
+                 .with(userAuth(USER)))
+                 .andDo(print())
+                 .andExpect(view().name("meals"))
+-                .andExpect(forwardedUrl("/WEB-INF/jsp/meals.jsp"))
+-                .andExpect(model().attribute("meals", MealsUtil.getWithExceeded(MealTestData.MEALS, USER.getCaloriesPerDay())));
++                .andExpect(forwardedUrl("/WEB-INF/jsp/meals.jsp"));
+     }
+-
+ }
+\ No newline at end of file

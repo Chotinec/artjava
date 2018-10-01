@@ -1,0 +1,221 @@
+Index: system.properties
+IDEA additional info:
+Subsystem: com.intellij.openapi.diff.impl.patch.CharsetEP
+<+>UTF-8
+===================================================================
+--- system.properties	(date 1536796888018)
++++ system.properties	(date 1536796888018)
+@@ -0,0 +1,1 @@
++java.runtime.version=1.8
+\ No newline at end of file
+Index: settings.xml
+IDEA additional info:
+Subsystem: com.intellij.openapi.diff.impl.patch.CharsetEP
+<+>UTF-8
+===================================================================
+--- settings.xml	(date 1536796888011)
++++ settings.xml	(date 1536796888011)
+@@ -0,0 +1,9 @@
++<?xml version="1.0" encoding="UTF-8"?>
++<settings xmlns="http://maven.apache.org/SETTINGS/1.0.0"
++          xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
++          xsi:schemaLocation="http://maven.apache.org/SETTINGS/1.0.0 http://maven.apache.org/xsd/settings-1.0.0.xsd">
++
++    <activeProfiles>
++        <activeProfile>heroku</activeProfile>
++    </activeProfiles>
++</settings>
+Index: Procfile
+IDEA additional info:
+Subsystem: com.intellij.openapi.diff.impl.patch.CharsetEP
+<+>UTF-8
+===================================================================
+--- Procfile	(date 1536796888004)
++++ Procfile	(date 1536796888004)
+@@ -0,0 +1,1 @@
++web:    java $JAVA_OPTS -Dspring.profiles.active="datajpa,heroku" -DTOPJAVA_ROOT="." -jar target/dependency/webapp-runner.jar --port $PORT target/*.war
+\ No newline at end of file
+Index: hr.bat
+IDEA additional info:
+Subsystem: com.intellij.openapi.diff.impl.patch.CharsetEP
+<+>UTF-8
+===================================================================
+--- hr.bat	(date 1536796887984)
++++ hr.bat	(date 1536796887984)
+@@ -0,0 +1,2 @@
++call mvn -B -s settings.xml -DskipTests=true clean package
++call java -Dspring.profiles.active="datajpa,heroku" -DDATABASE_URL="postgres://user:password@localhost:5432/topjava" -jar target/dependency/webapp-runner.jar target/*.war
+\ No newline at end of file
+Index: src/main/resources/db/heroku.properties
+IDEA additional info:
+Subsystem: com.intellij.openapi.diff.impl.patch.CharsetEP
+<+>UTF-8
+===================================================================
+--- src/main/resources/db/heroku.properties	(date 1536796880840)
++++ src/main/resources/db/heroku.properties	(date 1536796880840)
+@@ -0,0 +1,5 @@
++jpa.showSql=false
++hibernate.format_sql=false
++hibernate.use_sql_comments=false
++database.init=false
++jdbc.initLocation=initDB.sql
+\ No newline at end of file
+Index: pom.xml
+IDEA additional info:
+Subsystem: com.intellij.openapi.diff.impl.patch.CharsetEP
+<+>UTF-8
+===================================================================
+--- pom.xml	(date 1536796646000)
++++ pom.xml	(date 1536796887996)
+@@ -396,6 +396,49 @@
+                 <activeByDefault>true</activeByDefault>
+             </activation>
+         </profile>
++        <profile>
++            <id>heroku</id>
++            <!--https://devcenter.heroku.com/articles/java-webapp-runner            -->
++            <build>
++                <plugins>
++                    <plugin>
++                        <groupId>org.apache.maven.plugins</groupId>
++                        <artifactId>maven-dependency-plugin</artifactId>
++                        <version>3.1.0</version>
++                        <executions>
++                            <execution>
++                                <phase>package</phase>
++                                <goals>
++                                    <goal>copy</goal>
++                                </goals>
++                                <configuration>
++                                    <artifactItems>
++                                        <artifactItem>
++                                            <groupId>com.github.jsimone</groupId>
++                                            <artifactId>webapp-runner</artifactId>
++                                            <version>8.5.31.0</version>
++                                            <destFileName>webapp-runner.jar</destFileName>
++                                        </artifactItem>
++                                    </artifactItems>
++                                </configuration>
++                            </execution>
++                        </executions>
++                    </plugin>
++                </plugins>
++            </build>
++            <dependencies>
++                <dependency>
++                    <groupId>org.postgresql</groupId>
++                    <artifactId>postgresql</artifactId>
++                    <version>${postgresql.version}</version>
++                </dependency>
++                <dependency>
++                    <groupId>org.apache.tomcat</groupId>
++                    <artifactId>tomcat-jdbc</artifactId>
++                    <version>${tomcat.version}</version>
++                </dependency>
++            </dependencies>
++        </profile>
+     </profiles>
+ 
+     <dependencyManagement>
+Index: src/test/java/ru/javawebinar/topjava/web/user/HerokuRestControllerTest.java
+IDEA additional info:
+Subsystem: com.intellij.openapi.diff.impl.patch.CharsetEP
+<+>UTF-8
+===================================================================
+--- src/test/java/ru/javawebinar/topjava/web/user/HerokuRestControllerTest.java	(date 1536796646000)
++++ src/test/java/ru/javawebinar/topjava/web/user/HerokuRestControllerTest.java	(date 1536797042981)
+@@ -1,12 +1,18 @@
+ package ru.javawebinar.topjava.web.user;
+ 
+ import org.junit.jupiter.api.Test;
++import org.springframework.core.env.PropertySource;
++import org.springframework.core.io.ClassPathResource;
++import org.springframework.core.io.Resource;
++import org.springframework.core.io.support.ResourcePropertySource;
+ import org.springframework.http.MediaType;
+ import org.springframework.test.context.ActiveProfiles;
+ import ru.javawebinar.topjava.UserTestData;
+ import ru.javawebinar.topjava.util.exception.ErrorType;
+ import ru.javawebinar.topjava.web.AbstractControllerTest;
+ 
++import java.io.IOException;
++
+ import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.delete;
+ import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.put;
+ import static org.springframework.test.web.servlet.result.MockMvcResultHandlers.print;
+@@ -17,10 +23,27 @@
+ import static ru.javawebinar.topjava.util.exception.ModificationRestrictionException.EXCEPTION_MODIFICATION_RESTRICTION;
+ 
+ @ActiveProfiles({HEROKU})
+-public class HerokuRestControllerTest extends AbstractControllerTest {
++class HerokuRestControllerTest extends AbstractControllerTest {
+ 
+     private static final String REST_URL = AdminRestController.REST_URL + '/';
+ 
++    // Set DATABASE_URL environment for heroku profile
++    static {
++        Resource resource = new ClassPathResource("db/postgres.properties");
++        try {
++            PropertySource propertySource = new ResourcePropertySource(resource);
++            String herokuDbUrl = String.format("postgres://%s:%s@%s",
++                    propertySource.getProperty("database.username"),
++                    propertySource.getProperty("database.password"),
++                    ((String) propertySource.getProperty("database.url")).substring(18));
++            System.out.println(herokuDbUrl);
++
++            System.setProperty("DATABASE_URL", herokuDbUrl);
++        } catch (IOException e) {
++            throw new IllegalStateException(e);
++        }
++    }
++
+     @Test
+     void testDelete() throws Exception {
+         mockMvc.perform(delete(REST_URL + USER_ID)
+Index: src/main/resources/spring/spring-db.xml
+IDEA additional info:
+Subsystem: com.intellij.openapi.diff.impl.patch.CharsetEP
+<+>UTF-8
+===================================================================
+--- src/main/resources/spring/spring-db.xml	(date 1536796646000)
++++ src/main/resources/spring/spring-db.xml	(date 1536796880848)
+@@ -34,7 +34,7 @@
+               p:password="${database.password}"/>
+     </beans>
+ 
+-    <beans profile="postgres, heroku">
++    <beans profile="postgres">
+         <context:property-placeholder location="classpath:db/postgres.properties" system-properties-mode="OVERRIDE"/>
+ 
+         <bean id="dataSource"
+@@ -65,6 +65,30 @@
+             <property name="dataSource" ref="dataSource" />
+         </bean>
+     </beans>
++
++    <beans profile="heroku">
++        <context:property-placeholder location="classpath:/db/heroku.properties" system-properties-mode="OVERRIDE"/>
++
++        <bean class="java.net.URI" id="dbUrl">
++            <constructor-arg value="${DATABASE_URL}"/>
++        </bean>
++        <bean id="dataSource"
++              class="org.apache.tomcat.jdbc.pool.DataSource"
++              p:url="#{ 'jdbc:postgresql://' + @dbUrl.getHost() + @dbUrl.getPath() }"
++              p:username="#{ @dbUrl.getUserInfo().split(':')[0] }"
++              p:password="#{ @dbUrl.getUserInfo().split(':')[1] }"
++              p:driverClassName="org.postgresql.Driver"
++              p:validationQuery="SELECT 1"
++              p:maxActive="10"
++              p:minIdle="2"
++              p:maxWait="20000"
++              p:initialSize="2"
++              p:maxIdle="5"
++              p:testOnBorrow="true"
++              p:removeAbandoned="true"
++              p:testOnConnect="true"
++              p:testWhileIdle="true"/>
++    </beans>
+ 
+     <beans profile="jpa,datajpa">
+         <bean id="entityManagerFactory" class="org.springframework.orm.jpa.LocalContainerEntityManagerFactoryBean"

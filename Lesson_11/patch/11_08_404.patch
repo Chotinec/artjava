@@ -1,0 +1,144 @@
+Index: src/main/webapp/test.html
+===================================================================
+--- src/main/webapp/test.html	(date 1536795070000)
++++ src/main/webapp/test.html	(date 1536795070000)
+@@ -1,13 +0,0 @@
+-<html>
+-<link rel="stylesheet" href="resources/css/style.css">
+-<link rel="stylesheet" href="webjars/bootstrap/4.1.0/css/bootstrap.min.css">
+-<link rel="shortcut icon" href="resources/images/icon-meal.png">
+-<body>
+-<hr/>
+-<ul>
+-    <li><a href="users">User list</a></li>
+-    <li><a href="meals">Meal list</a></li>
+-</ul>
+-<hr/>
+-</body>
+-</html>
+\ No newline at end of file
+Index: config/messages/app.properties
+IDEA additional info:
+Subsystem: com.intellij.openapi.diff.impl.patch.CharsetEP
+<+>UTF-8
+===================================================================
+--- config/messages/app.properties	(date 1536795070000)
++++ config/messages/app.properties	(date 1536795116208)
+@@ -45,6 +45,7 @@
+ error.dataNotFound=Data not found
+ error.dataError=Data error
+ error.validationError=Validation error
++error.wrongRequest=Wrong request
+ 
+ exception.user.duplicateEmail=User with this email already exists
+ exception.meal.duplicateDateTime=You already have meal with this date/time
+Index: config/messages/app_ru.properties
+IDEA additional info:
+Subsystem: com.intellij.openapi.diff.impl.patch.CharsetEP
+<+>UTF-8
+===================================================================
+--- config/messages/app_ru.properties	(date 1536795070000)
++++ config/messages/app_ru.properties	(date 1536795116217)
+@@ -45,6 +45,7 @@
+ error.dataNotFound=Данные не найдены
+ error.dataError=Ошибка в данных
+ error.validationError=Ошибка проверки данных
++error.wrongRequest=Неверный запрос
+ 
+ exception.user.duplicateEmail=Пользователь с такой почтой уже есть в приложении
+ exception.meal.duplicateDateTime=У вас уже есть еда с такой датой/временем
+Index: src/main/webapp/WEB-INF/web.xml
+IDEA additional info:
+Subsystem: com.intellij.openapi.diff.impl.patch.CharsetEP
+<+>UTF-8
+===================================================================
+--- src/main/webapp/WEB-INF/web.xml	(date 1536795070000)
++++ src/main/webapp/WEB-INF/web.xml	(date 1536795116248)
+@@ -30,6 +30,10 @@
+             <param-name>contextConfigLocation</param-name>
+             <param-value>classpath:spring/spring-mvc.xml</param-value>
+         </init-param>
++        <init-param>
++            <param-name>throwExceptionIfNoHandlerFound</param-name>
++            <param-value>true</param-value>
++        </init-param>
+         <load-on-startup>1</load-on-startup>
+     </servlet>
+     <servlet-mapping>
+Index: src/main/resources/spring/spring-mvc.xml
+IDEA additional info:
+Subsystem: com.intellij.openapi.diff.impl.patch.CharsetEP
+<+>UTF-8
+===================================================================
+--- src/main/resources/spring/spring-mvc.xml	(date 1536795070000)
++++ src/main/resources/spring/spring-mvc.xml	(date 1536795116242)
+@@ -11,7 +11,8 @@
+     <bean class="ru.javawebinar.topjava.web.json.JacksonObjectMapper" id="objectMapper" factory-method="getMapper"/>
+ 
+     <!-- serve static resources (*.html, ...) from src/main/webapp/ -->
+-    <mvc:default-servlet-handler/>
++    <!--https://stackoverflow.com/a/44393203/548473-->
++    <!--<mvc:default-servlet-handler/>-->
+ 
+     <security:global-method-security secured-annotations="enabled" pre-post-annotations="enabled"/>
+ 
+Index: src/main/java/ru/javawebinar/topjava/web/GlobalControllerExceptionHandler.java
+IDEA additional info:
+Subsystem: com.intellij.openapi.diff.impl.patch.CharsetEP
+<+>UTF-8
+===================================================================
+--- src/main/java/ru/javawebinar/topjava/web/GlobalControllerExceptionHandler.java	(date 1536795070000)
++++ src/main/java/ru/javawebinar/topjava/web/GlobalControllerExceptionHandler.java	(date 1536795116236)
+@@ -6,6 +6,7 @@
+ import org.springframework.web.bind.annotation.ControllerAdvice;
+ import org.springframework.web.bind.annotation.ExceptionHandler;
+ import org.springframework.web.servlet.ModelAndView;
++import org.springframework.web.servlet.NoHandlerFoundException;
+ import ru.javawebinar.topjava.AuthorizedUser;
+ import ru.javawebinar.topjava.util.ValidationUtil;
+ import ru.javawebinar.topjava.util.exception.ErrorType;
+@@ -19,12 +20,25 @@
+     @Autowired
+     private MessageUtil messageUtil;
+ 
++    @ExceptionHandler(NoHandlerFoundException.class)
++    public ModelAndView wrongRequest(HttpServletRequest req, NoHandlerFoundException e) throws Exception {
++        return logAndGetExceptionView(req, e, false, ErrorType.WRONG_REQUEST);
++    }
++
+     @ExceptionHandler(Exception.class)
+     public ModelAndView defaultErrorHandler(HttpServletRequest req, Exception e) throws Exception {
++        return logAndGetExceptionView(req, e, true, ErrorType.APP_ERROR);
++    }
++
++    private ModelAndView logAndGetExceptionView(HttpServletRequest req, Exception e, boolean logException, ErrorType errorType) {
+         Throwable rootCause = ValidationUtil.getRootCause(e);
+-        log.error("Exception at request " + req.getRequestURL(), rootCause);
++        if (logException) {
++            log.error(errorType + " at request " + req.getRequestURL(), rootCause);
++        } else {
++            log.warn("{} at request  {}: {}", errorType, req.getRequestURL(), rootCause.toString());
++        }
+         ModelAndView mav = new ModelAndView("exception/exception");
+-        mav.addObject("typeMessage", messageUtil.getMessage(ErrorType.APP_ERROR.getErrorCode()));
++        mav.addObject("typeMessage", messageUtil.getMessage(errorType.getErrorCode()));
+         mav.addObject("exception", rootCause);
+         mav.addObject("message", ValidationUtil.getMessage(rootCause));
+ 
+Index: src/main/java/ru/javawebinar/topjava/util/exception/ErrorType.java
+IDEA additional info:
+Subsystem: com.intellij.openapi.diff.impl.patch.CharsetEP
+<+>UTF-8
+===================================================================
+--- src/main/java/ru/javawebinar/topjava/util/exception/ErrorType.java	(date 1536795070000)
++++ src/main/java/ru/javawebinar/topjava/util/exception/ErrorType.java	(date 1536795116223)
+@@ -4,7 +4,8 @@
+     APP_ERROR("error.appError"),
+     DATA_NOT_FOUND("error.dataNotFound"),
+     DATA_ERROR("error.dataError"),
+-    VALIDATION_ERROR("error.validationError");
++    VALIDATION_ERROR("error.validationError"),
++    WRONG_REQUEST("error.wrongRequest");
+ 
+     private final String errorCode;
+ 

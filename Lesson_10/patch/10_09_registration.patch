@@ -1,0 +1,151 @@
+Index: src/main/webapp/WEB-INF/jsp/profile.jsp
+IDEA additional info:
+Subsystem: com.intellij.openapi.diff.impl.patch.CharsetEP
+<+>UTF-8
+===================================================================
+--- src/main/webapp/WEB-INF/jsp/profile.jsp	(date 1536067586000)
++++ src/main/webapp/WEB-INF/jsp/profile.jsp	(date 1536067886258)
+@@ -14,8 +14,8 @@
+         <%--@elvariable id="userTo" type="ru.javawebinar.topjava.to.UserTo"--%>
+         <div class="row">
+             <div class="col-5 offset-3">
+-                <h3>${userTo.name} <spring:message code="app.profile"/></h3>
+-                <form:form class="form-group" modelAttribute="userTo" method="post" action="profile"
++                <h3>${userTo.name} <spring:message code="${register ? 'app.register' : 'app.profile'}"/></h3>
++                <form:form class="form-group" modelAttribute="userTo" method="post" action="${register ? 'register' : 'profile'}"
+                            charset="utf-8" accept-charset="UTF-8">
+ 
+                     <topjava:inputField labelCode="user.name" name="name"/>
+Index: src/main/java/ru/javawebinar/topjava/web/RootController.java
+IDEA additional info:
+Subsystem: com.intellij.openapi.diff.impl.patch.CharsetEP
+<+>UTF-8
+===================================================================
+--- src/main/java/ru/javawebinar/topjava/web/RootController.java	(date 1536067586000)
++++ src/main/java/ru/javawebinar/topjava/web/RootController.java	(date 1536067717083)
+@@ -2,11 +2,13 @@
+ 
+ import org.springframework.security.access.prepost.PreAuthorize;
+ import org.springframework.stereotype.Controller;
++import org.springframework.ui.ModelMap;
+ import org.springframework.validation.BindingResult;
+ import org.springframework.web.bind.annotation.GetMapping;
+ import org.springframework.web.bind.annotation.PostMapping;
+ import org.springframework.web.bind.support.SessionStatus;
+ import ru.javawebinar.topjava.to.UserTo;
++import ru.javawebinar.topjava.util.UserUtil;
+ import ru.javawebinar.topjava.web.user.AbstractUserController;
+ 
+ import javax.validation.Valid;
+@@ -52,4 +54,23 @@
+             return "redirect:meals";
+         }
+     }
++
++    @GetMapping("/register")
++    public String register(ModelMap model) {
++        model.addAttribute("userTo", new UserTo());
++        model.addAttribute("register", true);
++        return "profile";
++    }
++
++    @PostMapping("/register")
++    public String saveRegister(@Valid UserTo userTo, BindingResult result, SessionStatus status, ModelMap model) {
++        if (result.hasErrors()) {
++            model.addAttribute("register", true);
++            return "profile";
++        } else {
++            super.create(UserUtil.createNewFromTo(userTo));
++            status.setComplete();
++            return "redirect:login?message=app.registered&username=" + userTo.getEmail();
++        }
++    }
+ }
+Index: src/main/webapp/WEB-INF/jsp/login.jsp
+IDEA additional info:
+Subsystem: com.intellij.openapi.diff.impl.patch.CharsetEP
+<+>UTF-8
+===================================================================
+--- src/main/webapp/WEB-INF/jsp/login.jsp	(date 1536067586000)
++++ src/main/webapp/WEB-INF/jsp/login.jsp	(date 1536067717108)
+@@ -17,6 +17,7 @@
+         </c:if>
+         <br/>
+         <p>
++            <a class="btn btn-lg btn-success" href="register"><spring:message code="app.register"/> &raquo;</a>
+             <button type="submit" class="btn btn-lg btn-primary" onclick="login('user@yandex.ru', 'password')">
+                 <spring:message code="app.login"/> User
+             </button>
+@@ -62,6 +63,9 @@
+ </div>
+ <jsp:include page="fragments/footer.jsp"/>
+ <script type="text/javascript">
++<c:if test="${not empty param.username}">
++    setCredentials("${param.username}", "");
++</c:if>
+     function login(username, password) {
+         setCredentials(username, password);
+         $("#login_form").submit();
+Index: config/messages/app.properties
+IDEA additional info:
+Subsystem: com.intellij.openapi.diff.impl.patch.CharsetEP
+<+>UTF-8
+===================================================================
+--- config/messages/app.properties	(date 1536067586000)
++++ config/messages/app.properties	(date 1536067717065)
+@@ -2,6 +2,8 @@
+ app.footer=Project <a href="https://github.com/JavaOPs/topjava" target=_blank>Maven/ Spring/ Security/ JPA(Hibernate)/ Jackson/jQuery</a> application
+ app.login=Login as
+ app.profile=profile
++app.register=Registration
++app.registered=You are registered. Please Sign in.
+ 
+ user.title=Users
+ user.edit=Edit user
+Index: config/messages/app_ru.properties
+IDEA additional info:
+Subsystem: com.intellij.openapi.diff.impl.patch.CharsetEP
+<+>UTF-8
+===================================================================
+--- config/messages/app_ru.properties	(date 1536067586000)
++++ config/messages/app_ru.properties	(date 1536067717076)
+@@ -2,6 +2,8 @@
+ app.footer=Приложение по проекту <a href="https://github.com/JavaOPs/topjava" target=_blank>Maven/ Spring/ Security/ JPA(Hibernate)/ Jackson/jQuery</a>
+ app.login=Зайти как
+ app.profile=профиль
++app.register=Регистрирация
++app.registered=Вы зарегистрированы. Введите ваш логин/пароль.
+ 
+ user.title=Пользователи
+ user.edit=Редактирование пользователя
+Index: src/main/resources/spring/spring-security.xml
+IDEA additional info:
+Subsystem: com.intellij.openapi.diff.impl.patch.CharsetEP
+<+>UTF-8
+===================================================================
+--- src/main/resources/spring/spring-security.xml	(date 1536067586000)
++++ src/main/resources/spring/spring-security.xml	(date 1536067717090)
+@@ -18,6 +18,7 @@
+ 
+     <http>
+         <intercept-url pattern="/login" access="isAnonymous()"/>
++        <intercept-url pattern="/register" access="isAnonymous()"/>
+ 
+         <intercept-url pattern="/**/admin/**" access="hasRole('ROLE_ADMIN')"/>
+         <intercept-url pattern="/**" access="isAuthenticated()"/>
+Index: src/main/webapp/WEB-INF/jsp/fragments/headTag.jsp
+IDEA additional info:
+Subsystem: com.intellij.openapi.diff.impl.patch.CharsetEP
+<+>UTF-8
+===================================================================
+--- src/main/webapp/WEB-INF/jsp/fragments/headTag.jsp	(date 1536067586000)
++++ src/main/webapp/WEB-INF/jsp/fragments/headTag.jsp	(date 1536067717098)
+@@ -16,7 +16,7 @@
+     <link rel="shortcut icon" href="resources/images/icon-meal.png">
+ 
+     <%--http://stackoverflow.com/a/24070373/548473--%>
+-    <script type="text/javascript" src="webjars/jquery/3.3.1-1/jquery.min.js" defer></script>
++    <script type="text/javascript" src="webjars/jquery/3.3.1-1/jquery.min.js"></script>
+     <script type="text/javascript" src="webjars/bootstrap/4.1.3/js/bootstrap.min.js" defer></script>
+     <script type="text/javascript" src="webjars/datatables/1.10.19/js/jquery.dataTables.min.js" defer></script>
+     <script type="text/javascript" src="webjars/datatables/1.10.19/js/dataTables.bootstrap4.min.js" defer></script>

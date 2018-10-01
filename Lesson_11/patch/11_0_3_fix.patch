@@ -1,0 +1,108 @@
+Index: src/main/java/ru/javawebinar/topjava/web/user/ProfileRestController.java
+IDEA additional info:
+Subsystem: com.intellij.openapi.diff.impl.patch.CharsetEP
+<+>UTF-8
+===================================================================
+--- src/main/java/ru/javawebinar/topjava/web/user/ProfileRestController.java	(date 1536778953000)
++++ src/main/java/ru/javawebinar/topjava/web/user/ProfileRestController.java	(date 1536778958646)
+@@ -2,10 +2,14 @@
+ 
+ import org.springframework.http.HttpStatus;
+ import org.springframework.http.MediaType;
++import org.springframework.http.ResponseEntity;
+ import org.springframework.web.bind.annotation.*;
++import org.springframework.web.servlet.support.ServletUriComponentsBuilder;
+ import ru.javawebinar.topjava.model.User;
+ import ru.javawebinar.topjava.to.UserTo;
+-import ru.javawebinar.topjava.web.SecurityUtil;
++import ru.javawebinar.topjava.util.UserUtil;
++
++import java.net.URI;
+ 
+ import static ru.javawebinar.topjava.web.SecurityUtil.authUserId;
+ 
+@@ -25,10 +29,21 @@
+         super.delete(authUserId());
+     }
+ 
++    @PostMapping(value = "/register", consumes = MediaType.APPLICATION_JSON_VALUE)
++    @ResponseStatus(value = HttpStatus.CREATED)
++    public ResponseEntity<User> register(@RequestBody UserTo userTo) {
++        User created = super.create(UserUtil.createNewFromTo(userTo));
++        URI uriOfNewResource = ServletUriComponentsBuilder.fromCurrentContextPath()
++                .path(REST_URL + "/{id}")
++                .buildAndExpand(created.getId()).toUri();
++
++        return ResponseEntity.created(uriOfNewResource).body(created);
++    }
++
+     @PutMapping(consumes = MediaType.APPLICATION_JSON_VALUE)
+     @ResponseStatus(value = HttpStatus.NO_CONTENT)
+     public void update(@RequestBody UserTo userTo) {
+-        super.update(userTo, SecurityUtil.authUserId());
++        super.update(userTo, authUserId());
+     }
+ 
+     @GetMapping(value = "/text")
+Index: src/test/java/ru/javawebinar/topjava/web/user/ProfileRestControllerTest.java
+IDEA additional info:
+Subsystem: com.intellij.openapi.diff.impl.patch.CharsetEP
+<+>UTF-8
+===================================================================
+--- src/test/java/ru/javawebinar/topjava/web/user/ProfileRestControllerTest.java	(date 1536778953000)
++++ src/test/java/ru/javawebinar/topjava/web/user/ProfileRestControllerTest.java	(date 1536778958658)
+@@ -2,6 +2,7 @@
+ 
+ import org.junit.jupiter.api.Test;
+ import org.springframework.http.MediaType;
++import org.springframework.test.web.servlet.ResultActions;
+ import ru.javawebinar.topjava.TestUtil;
+ import ru.javawebinar.topjava.model.User;
+ import ru.javawebinar.topjava.to.UserTo;
+@@ -13,6 +14,7 @@
+ import static org.springframework.test.web.servlet.result.MockMvcResultHandlers.print;
+ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.content;
+ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
++import static ru.javawebinar.topjava.TestUtil.readFromJson;
+ import static ru.javawebinar.topjava.TestUtil.userHttpBasic;
+ import static ru.javawebinar.topjava.UserTestData.*;
+ import static ru.javawebinar.topjava.web.user.ProfileRestController.REST_URL;
+@@ -44,6 +46,23 @@
+         assertMatch(userService.getAll(), ADMIN);
+     }
+ 
++    @Test
++    void testRegister() throws Exception {
++        UserTo createdTo = new UserTo(null, "newName", "newemail@ya.ru", "newPassword", 1500);
++
++        ResultActions action = mockMvc.perform(post(REST_URL + "/register").contentType(MediaType.APPLICATION_JSON)
++                .content(JsonUtil.writeValue(createdTo)))
++                .andDo(print())
++                .andExpect(status().isCreated());
++        User returned = readFromJson(action, User.class);
++
++        User created = UserUtil.createNewFromTo(createdTo);
++        created.setId(returned.getId());
++
++        assertMatch(returned, created);
++        assertMatch(userService.getByEmail("newemail@ya.ru"), created);
++    }
++
+     @Test
+     void testUpdate() throws Exception {
+         UserTo updatedTo = new UserTo(null, "newName", "newemail@ya.ru", "newPassword", 1500);
+Index: src/main/resources/spring/spring-security.xml
+IDEA additional info:
+Subsystem: com.intellij.openapi.diff.impl.patch.CharsetEP
+<+>UTF-8
+===================================================================
+--- src/main/resources/spring/spring-security.xml	(date 1536778953000)
++++ src/main/resources/spring/spring-security.xml	(date 1536778958653)
+@@ -10,6 +10,7 @@
+     <http pattern="/rest/**" use-expressions="true" name="restSecurityFilterChain" create-session="stateless">
+         <http-basic/>
+         <intercept-url pattern="/rest/admin/**" access="hasRole('ROLE_ADMIN')"/>
++        <intercept-url pattern="/rest/profile/register" access="isAnonymous()"/>
+         <intercept-url pattern="/**" access="isAuthenticated()"/>
+         <csrf disabled="true"/>
+     </http>

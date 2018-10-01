@@ -1,0 +1,175 @@
+Index: src/main/webapp/WEB-INF/jsp/meals.jsp
+IDEA additional info:
+Subsystem: com.intellij.openapi.diff.impl.patch.CharsetEP
+<+>UTF-8
+===================================================================
+--- src/main/webapp/WEB-INF/jsp/meals.jsp	(revision 23b26ced96fcc9e51e2be207c2c2c59314966b78)
++++ src/main/webapp/WEB-INF/jsp/meals.jsp	(date 1536797877578)
+@@ -5,8 +5,8 @@
+ <html>
+ <jsp:include page="fragments/headTag.jsp"/>
+ <body>
+-<script type="text/javascript" src="resources/js/datatablesUtil.js" defer></script>
+-<script type="text/javascript" src="resources/js/mealDatatables.js" defer></script>
++<script type="text/javascript" src="resources/js/topjava.common.js" defer></script>
++<script type="text/javascript" src="resources/js/topjava.meals.js" defer></script>
+ <jsp:include page="fragments/bodyHeader.jsp"/>
+ 
+ <div class="jumbotron pt-4">
+Index: src/main/webapp/WEB-INF/jsp/profile.jsp
+IDEA additional info:
+Subsystem: com.intellij.openapi.diff.impl.patch.CharsetEP
+<+>UTF-8
+===================================================================
+--- src/main/webapp/WEB-INF/jsp/profile.jsp	(revision 23b26ced96fcc9e51e2be207c2c2c59314966b78)
++++ src/main/webapp/WEB-INF/jsp/profile.jsp	(date 1536797877587)
+@@ -24,6 +24,10 @@
+                     <topjava:inputField labelCode="user.caloriesPerDay" name="caloriesPerDay" inputType="number"/>
+ 
+                     <div class="text-right">
++                        <a class="btn btn-secondary" onclick="window.history.back()">
++                            <span class="fa fa-close"></span>
++                            <spring:message code="common.cancel"/>
++                        </a>
+                         <button type="submit" class="btn btn-primary">
+                             <span class="fa fa-check"></span>
+                             <spring:message code="common.save"/>
+Index: config/messages/app_ru.properties
+IDEA additional info:
+Subsystem: com.intellij.openapi.diff.impl.patch.CharsetEP
+<+>UTF-8
+===================================================================
+--- config/messages/app_ru.properties	(revision 23b26ced96fcc9e51e2be207c2c2c59314966b78)
++++ config/messages/app_ru.properties	(date 1536797923052)
+@@ -2,7 +2,7 @@
+ app.footer=Приложение по проекту <a href="https://github.com/JavaOPs/topjava" target=_blank>Maven/ Spring/ Security/ JPA(Hibernate)/ Jackson/jQuery</a>
+ app.login=Зайти как
+ app.profile=профиль
+-app.register=Регистрирация
++app.register=Регистрация
+ app.registered=Вы зарегистрированы. Введите ваш логин/пароль.
+ 
+ user.title=Пользователи
+Index: pom.xml
+IDEA additional info:
+Subsystem: com.intellij.openapi.diff.impl.patch.CharsetEP
+<+>UTF-8
+===================================================================
+--- pom.xml	(revision 23b26ced96fcc9e51e2be207c2c2c59314966b78)
++++ pom.xml	(date 1536797877602)
+@@ -45,7 +45,7 @@
+         <!--webjars-->
+         <webjars-bootstrap.version>4.1.3</webjars-bootstrap.version>
+         <webjars-jquery.version>3.3.1-1</webjars-jquery.version>
+-        <webjars-datetimepicker.version>2.5.14</webjars-datetimepicker.version>
++        <webjars-datetimepicker.version>2.5.20</webjars-datetimepicker.version>
+         <webjars-noty.version>3.1.4</webjars-noty.version>
+         <webjars-datatables.version>1.10.19</webjars-datatables.version>
+     </properties>
+@@ -281,7 +281,7 @@
+             </exclusions>
+         </dependency>
+         <dependency>
+-            <groupId>org.webjars.bower</groupId>
++            <groupId>org.webjars.bowergithub.xdan</groupId>
+             <artifactId>datetimepicker</artifactId>
+             <version>${webjars-datetimepicker.version}</version>
+             <exclusions>
+Index: src/main/webapp/resources/js/mealDatatables.js
+===================================================================
+--- src/main/webapp/resources/js/mealDatatables.js	(revision 23b26ced96fcc9e51e2be207c2c2c59314966b78)
++++ src/main/webapp/resources/js/topjava.meals.js	(date 1536797877526)
+@@ -74,7 +74,6 @@
+     startDate.datetimepicker({
+         timepicker: false,
+         format: 'Y-m-d',
+-        formatDate: 'Y-m-d',
+         onShow: function (ct) {
+             this.setOptions({
+                 maxDate: endDate.val() ? endDate.val() : false
+@@ -84,7 +83,6 @@
+     endDate.datetimepicker({
+         timepicker: false,
+         format: 'Y-m-d',
+-        formatDate: 'Y-m-d',
+         onShow: function (ct) {
+             this.setOptions({
+                 minDate: startDate.val() ? startDate.val() : false
+@@ -92,9 +90,25 @@
+         }
+     });
+ 
+-    $('#startTime, #endTime').datetimepicker({
++    const startTime = $('#startTime');
++    const endTime = $('#endTime');
++    startTime.datetimepicker({
+         datepicker: false,
+-        format: 'H:i'
++        format: 'H:i',
++        onShow: function (ct) {
++            this.setOptions({
++                maxTime: endTime.val() ? endTime.val() : false
++            })
++        }
++    });
++    endTime.datetimepicker({
++        datepicker: false,
++        format: 'H:i',
++        onShow: function (ct) {
++            this.setOptions({
++                minTime: startTime.val() ? startTime.val() : false
++            })
++        }
+     });
+ 
+     $('#dateTime').datetimepicker({
+Index: src/main/webapp/WEB-INF/jsp/fragments/headTag.jsp
+IDEA additional info:
+Subsystem: com.intellij.openapi.diff.impl.patch.CharsetEP
+<+>UTF-8
+===================================================================
+--- src/main/webapp/WEB-INF/jsp/fragments/headTag.jsp	(revision 23b26ced96fcc9e51e2be207c2c2c59314966b78)
++++ src/main/webapp/WEB-INF/jsp/fragments/headTag.jsp	(date 1536797877571)
+@@ -16,7 +16,7 @@
+     <link rel="stylesheet" href="webjars/noty/3.1.4/demo/font-awesome/css/font-awesome.min.css">
+     <link rel="stylesheet" href="webjars/datatables/1.10.19/css/dataTables.bootstrap4.min.css">
+     <link rel="stylesheet" href="webjars/noty/3.1.4/lib/noty.css"/>
+-    <link rel="stylesheet" href="webjars/datetimepicker/2.5.14/jquery.datetimepicker.css">
++    <link rel="stylesheet" href="webjars/datetimepicker/jquery.datetimepicker.css">
+     <link rel="shortcut icon" href="resources/images/icon-meal.png">
+ 
+     <%--http://stackoverflow.com/a/24070373/548473--%>
+@@ -25,5 +25,5 @@
+     <script type="text/javascript" src="webjars/datatables/1.10.19/js/jquery.dataTables.min.js" defer></script>
+     <script type="text/javascript" src="webjars/datatables/1.10.19/js/dataTables.bootstrap4.min.js" defer></script>
+     <script type="text/javascript" src="webjars/noty/3.1.4/lib/noty.min.js" defer></script>
+-    <script type="text/javascript" src="webjars/datetimepicker/2.5.14/build/jquery.datetimepicker.full.min.js" defer></script>
++    <script type="text/javascript" src="webjars/datetimepicker/build/jquery.datetimepicker.full.min.js" defer></script>
+ </head>
+\ No newline at end of file
+Index: src/main/webapp/resources/js/datatablesUtil.js
+===================================================================
+--- src/main/webapp/resources/js/datatablesUtil.js	(revision 23b26ced96fcc9e51e2be207c2c2c59314966b78)
++++ src/main/webapp/resources/js/topjava.common.js	(date 1536797869052)
+Index: src/main/webapp/resources/js/userDatatables.js
+===================================================================
+--- src/main/webapp/resources/js/userDatatables.js	(revision 23b26ced96fcc9e51e2be207c2c2c59314966b78)
++++ src/main/webapp/resources/js/topjava.users.js	(date 1536797869053)
+Index: src/main/webapp/WEB-INF/jsp/users.jsp
+IDEA additional info:
+Subsystem: com.intellij.openapi.diff.impl.patch.CharsetEP
+<+>UTF-8
+===================================================================
+--- src/main/webapp/WEB-INF/jsp/users.jsp	(revision 23b26ced96fcc9e51e2be207c2c2c59314966b78)
++++ src/main/webapp/WEB-INF/jsp/users.jsp	(date 1536797877594)
+@@ -6,8 +6,8 @@
+ <html>
+ <jsp:include page="fragments/headTag.jsp"/>
+ <body>
+-<script type="text/javascript" src="resources/js/datatablesUtil.js" defer></script>
+-<script type="text/javascript" src="resources/js/userDatatables.js" defer></script>
++<script type="text/javascript" src="resources/js/topjava.common.js" defer></script>
++<script type="text/javascript" src="resources/js/topjava.users.js" defer></script>
+ <jsp:include page="fragments/bodyHeader.jsp"/>
+ 
+ <div class="jumbotron pt-4">

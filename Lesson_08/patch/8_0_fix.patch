@@ -1,0 +1,32 @@
+Index: src/test/java/ru/javawebinar/topjava/service/AbstractMealServiceTest.java
+IDEA additional info:
+Subsystem: com.intellij.openapi.diff.impl.patch.CharsetEP
+<+>UTF-8
+===================================================================
+--- src/test/java/ru/javawebinar/topjava/service/AbstractMealServiceTest.java	(revision eadbce9645fd10abd4a594620c2f83327d28c7a1)
++++ src/test/java/ru/javawebinar/topjava/service/AbstractMealServiceTest.java	(date 1534764182088)
+@@ -80,7 +80,7 @@
+ 
+     @Test
+     void testValidation() throws Exception {
+-        Assumptions.assumeTrue(isJpaBased(), "JPA not supported");
++        Assumptions.assumeTrue(isJpaBased(), "Validation not supported (only for JPA)");
+         validateRootCause(() -> service.create(new Meal(null, of(2015, Month.JUNE, 1, 18, 0), "  ", 300), USER_ID), ConstraintViolationException.class);
+         validateRootCause(() -> service.create(new Meal(null, null, "Description", 300), USER_ID), ConstraintViolationException.class);
+         validateRootCause(() -> service.create(new Meal(null, of(2015, Month.JUNE, 1, 18, 0), "Description", 9), USER_ID), ConstraintViolationException.class);
+Index: src/main/java/ru/javawebinar/topjava/web/json/JacksonObjectMapper.java
+IDEA additional info:
+Subsystem: com.intellij.openapi.diff.impl.patch.CharsetEP
+<+>UTF-8
+===================================================================
+--- src/main/java/ru/javawebinar/topjava/web/json/JacksonObjectMapper.java	(revision eadbce9645fd10abd4a594620c2f83327d28c7a1)
++++ src/main/java/ru/javawebinar/topjava/web/json/JacksonObjectMapper.java	(date 1534951982604)
+@@ -14,7 +14,7 @@
+  *
+  * @link https://github.com/FasterXML/jackson
+  * @link https://github.com/FasterXML/jackson-datatype-hibernate
+- * @link http://wiki.fasterxml.com/JacksonHowToCustomSerializers
++ * @link https://github.com/FasterXML/jackson-docs/wiki/JacksonHowToCustomSerializers
+  */
+ public class JacksonObjectMapper extends ObjectMapper {
+ 

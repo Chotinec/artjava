@@ -1,0 +1,118 @@
+Index: src/test/java/ru/javawebinar/topjava/web/ResourceControllerTest.java
+IDEA additional info:
+Subsystem: com.intellij.openapi.diff.impl.patch.CharsetEP
+<+>UTF-8
+===================================================================
+--- src/test/java/ru/javawebinar/topjava/web/ResourceControllerTest.java	(date 1534941831108)
++++ src/test/java/ru/javawebinar/topjava/web/ResourceControllerTest.java	(date 1534941831108)
+@@ -0,0 +1,20 @@
++package ru.javawebinar.topjava.web;
++
++import org.junit.jupiter.api.Test;
++import org.springframework.http.MediaType;
++
++import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
++import static org.springframework.test.web.servlet.result.MockMvcResultHandlers.print;
++import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.content;
++import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
++
++class ResourceControllerTest extends AbstractControllerTest {
++
++    @Test
++    void testResources() throws Exception {
++        mockMvc.perform(get("/resources/css/style.css"))
++                .andDo(print())
++                .andExpect(content().contentType(MediaType.valueOf("text/css")))
++                .andExpect(status().isOk());
++    }
++}
+\ No newline at end of file
+Index: src/main/resources/logback.xml
+IDEA additional info:
+Subsystem: com.intellij.openapi.diff.impl.patch.CharsetEP
+<+>UTF-8
+===================================================================
+--- src/main/resources/logback.xml	(date 1534941668000)
++++ src/main/resources/logback.xml	(date 1534941687598)
+@@ -21,7 +21,8 @@
+     </appender>
+ 
+     <logger name="ru.javawebinar.topjava" level="debug"/>
+-    <logger name="org.springframework.web.servlet" level="debug"/>
++    <!--<logger name="org.springframework.web.servlet" level="debug"/>-->
++    <logger name="org.springframework.web.servlet.mvc.method.annotation.ExceptionHandlerExceptionResolver" level="debug"/>
+ 
+     <root level="info">
+         <appender-ref ref="file"/>
+Index: src/test/java/ru/javawebinar/topjava/web/RootControllerTest.java
+IDEA additional info:
+Subsystem: com.intellij.openapi.diff.impl.patch.CharsetEP
+<+>UTF-8
+===================================================================
+--- src/test/java/ru/javawebinar/topjava/web/RootControllerTest.java	(date 1534941668000)
++++ src/test/java/ru/javawebinar/topjava/web/RootControllerTest.java	(date 1534941831094)
+@@ -1,6 +1,8 @@
+ package ru.javawebinar.topjava.web;
+ 
+ import org.junit.jupiter.api.Test;
++import ru.javawebinar.topjava.MealTestData;
++import ru.javawebinar.topjava.util.MealsUtil;
+ 
+ import static org.hamcrest.Matchers.*;
+ import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
+@@ -26,4 +28,15 @@
+                         )
+                 )));
+     }
++
++    @Test
++    void testMeals() throws Exception {
++        mockMvc.perform(get("/meals"))
++                .andDo(print())
++                .andExpect(status().isOk())
++                .andExpect(view().name("meals"))
++                .andExpect(forwardedUrl("/WEB-INF/jsp/meals.jsp"))
++                .andExpect(model().attribute("meals", MealsUtil.getWithExceeded(MealTestData.MEALS, SecurityUtil.authUserCaloriesPerDay())));
++    }
++
+ }
+\ No newline at end of file
+Index: src/main/java/ru/javawebinar/topjava/to/MealWithExceed.java
+IDEA additional info:
+Subsystem: com.intellij.openapi.diff.impl.patch.CharsetEP
+<+>UTF-8
+===================================================================
+--- src/main/java/ru/javawebinar/topjava/to/MealWithExceed.java	(date 1534941668000)
++++ src/main/java/ru/javawebinar/topjava/to/MealWithExceed.java	(date 1534941687592)
+@@ -1,6 +1,7 @@
+ package ru.javawebinar.topjava.to;
+ 
+ import java.time.LocalDateTime;
++import java.util.Objects;
+ 
+ public class MealWithExceed {
+     private final Integer id;
+@@ -41,6 +42,23 @@
+         return exceed;
+     }
+ 
++    @Override
++    public boolean equals(Object o) {
++        if (this == o) return true;
++        if (o == null || getClass() != o.getClass()) return false;
++        MealWithExceed that = (MealWithExceed) o;
++        return calories == that.calories &&
++                exceed == that.exceed &&
++                Objects.equals(id, that.id) &&
++                Objects.equals(dateTime, that.dateTime) &&
++                Objects.equals(description, that.description);
++    }
++
++    @Override
++    public int hashCode() {
++        return Objects.hash(id, dateTime, description, calories, exceed);
++    }
++
+     @Override
+     public String toString() {
+         return "MealWithExceed{" +

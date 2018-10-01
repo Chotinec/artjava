@@ -1,0 +1,156 @@
+Index: src/main/java/ru/javawebinar/topjava/util/exception/NotFoundException.java
+IDEA additional info:
+Subsystem: com.intellij.openapi.diff.impl.patch.CharsetEP
+<+>UTF-8
+===================================================================
+--- src/main/java/ru/javawebinar/topjava/util/exception/NotFoundException.java	(date 1536797989000)
++++ src/main/java/ru/javawebinar/topjava/util/exception/NotFoundException.java	(date 1536797996725)
+@@ -1,7 +1,9 @@
+ package ru.javawebinar.topjava.util.exception;
+ 
++import org.springframework.lang.NonNull;
++
+ public class NotFoundException extends RuntimeException {
+-    public NotFoundException(String message) {
++    public NotFoundException(@NonNull String message) {
+         super(message);
+     }
+ }
+\ No newline at end of file
+Index: src/test/java/ru/javawebinar/topjava/web/RootControllerTest.java
+IDEA additional info:
+Subsystem: com.intellij.openapi.diff.impl.patch.CharsetEP
+<+>UTF-8
+===================================================================
+--- src/test/java/ru/javawebinar/topjava/web/RootControllerTest.java	(date 1536797989000)
++++ src/test/java/ru/javawebinar/topjava/web/RootControllerTest.java	(date 1536797996746)
+@@ -22,7 +22,7 @@
+     }
+ 
+     @Test
+-    public void testUnAuth() throws Exception {
++    void testUnAuth() throws Exception {
+         mockMvc.perform(get("/users"))
+                 .andDo(print())
+                 .andExpect(status().is3xxRedirection())
+Index: src/main/java/ru/javawebinar/topjava/util/ValidationUtil.java
+IDEA additional info:
+Subsystem: com.intellij.openapi.diff.impl.patch.CharsetEP
+<+>UTF-8
+===================================================================
+--- src/main/java/ru/javawebinar/topjava/util/ValidationUtil.java	(date 1536797989000)
++++ src/main/java/ru/javawebinar/topjava/util/ValidationUtil.java	(date 1536797996739)
+@@ -64,8 +64,10 @@
+         result.getFieldErrors().forEach(
+                 fe -> {
+                     String msg = fe.getDefaultMessage();
+-                    if (!msg.startsWith(fe.getField())) {
+-                        msg = fe.getField() + ' ' + msg;
++                    if (msg != null) {
++                        if (!msg.startsWith(fe.getField())) {
++                            msg = fe.getField() + ' ' + msg;
++                        }
+                     }
+                     joiner.add(msg);
+                 });
+Index: src/main/java/ru/javawebinar/topjava/util/UserUtil.java
+IDEA additional info:
+Subsystem: com.intellij.openapi.diff.impl.patch.CharsetEP
+<+>UTF-8
+===================================================================
+--- src/main/java/ru/javawebinar/topjava/util/UserUtil.java	(date 1536797989000)
++++ src/main/java/ru/javawebinar/topjava/util/UserUtil.java	(date 1536797996731)
+@@ -11,7 +11,7 @@
+     public static final int DEFAULT_CALORIES_PER_DAY = 2000;
+ 
+     public static User createNewFromTo(UserTo newUser) {
+-        return new User(null, newUser.getName(), newUser.getEmail().toLowerCase(), newUser.getPassword(), newUser.getCaloriesPerDay(), Role.ROLE_USER);
++        return new User(null, newUser.getName(), newUser.getEmail(), newUser.getPassword(), newUser.getCaloriesPerDay(), Role.ROLE_USER);
+     }
+ 
+     public static UserTo asTo(User user) {
+@@ -20,7 +20,7 @@
+ 
+     public static User updateFromTo(User user, UserTo userTo) {
+         user.setName(userTo.getName());
+-        user.setEmail(userTo.getEmail().toLowerCase());
++        user.setEmail(userTo.getEmail());
+         user.setCaloriesPerDay(userTo.getCaloriesPerDay());
+         user.setPassword(userTo.getPassword());
+         return user;
+@@ -29,7 +29,7 @@
+     public static User prepareToSave(User user, PasswordEncoder passwordEncoder) {
+         String password = user.getPassword();
+         user.setPassword(StringUtils.isEmpty(password) ? password : passwordEncoder.encode(password));
+-        user.setEmail(user.getEmail().toLowerCase());
++        user.setEmail(user.getEmail().trim().toLowerCase());
+         return user;
+     }
+ }
+\ No newline at end of file
+Index: src/main/java/ru/javawebinar/topjava/service/UserServiceImpl.java
+IDEA additional info:
+Subsystem: com.intellij.openapi.diff.impl.patch.CharsetEP
+<+>UTF-8
+===================================================================
+--- src/main/java/ru/javawebinar/topjava/service/UserServiceImpl.java	(date 1536797989000)
++++ src/main/java/ru/javawebinar/topjava/service/UserServiceImpl.java	(date 1536797996697)
+@@ -91,7 +91,7 @@
+ 
+     @Override
+     public AuthorizedUser loadUserByUsername(String email) throws UsernameNotFoundException {
+-        User user = repository.getByEmail(email.toLowerCase());
++        User user = repository.getByEmail(email.trim().toLowerCase());
+         if (user == null) {
+             throw new UsernameNotFoundException("User " + email + " is not found");
+         }
+Index: src/main/java/ru/javawebinar/topjava/util/exception/IllegalRequestDataException.java
+IDEA additional info:
+Subsystem: com.intellij.openapi.diff.impl.patch.CharsetEP
+<+>UTF-8
+===================================================================
+--- src/main/java/ru/javawebinar/topjava/util/exception/IllegalRequestDataException.java	(date 1536797989000)
++++ src/main/java/ru/javawebinar/topjava/util/exception/IllegalRequestDataException.java	(date 1536797996718)
+@@ -1,7 +1,9 @@
+ package ru.javawebinar.topjava.util.exception;
+ 
++import org.springframework.lang.NonNull;
++
+ public class IllegalRequestDataException extends RuntimeException {
+-    public IllegalRequestDataException(String msg) {
++    public IllegalRequestDataException(@NonNull String msg) {
+         super(msg);
+     }
+ }
+\ No newline at end of file
+Index: src/main/java/ru/javawebinar/topjava/to/UserTo.java
+IDEA additional info:
+Subsystem: com.intellij.openapi.diff.impl.patch.CharsetEP
+<+>UTF-8
+===================================================================
+--- src/main/java/ru/javawebinar/topjava/to/UserTo.java	(date 1536797989000)
++++ src/main/java/ru/javawebinar/topjava/to/UserTo.java	(date 1536797996708)
+@@ -60,7 +60,7 @@
+     }
+ 
+     public void setEmail(String email) {
+-        this.email = email;
++        this.email = email.trim().toLowerCase();
+     }
+ 
+     public void setCaloriesPerDay(Integer caloriesPerDay) {
+Index: src/main/resources/db/populateDB.sql
+IDEA additional info:
+Subsystem: com.intellij.openapi.diff.impl.patch.CharsetEP
+<+>UTF-8
+===================================================================
+--- src/main/resources/db/populateDB.sql	(date 1536797989000)
++++ src/main/resources/db/populateDB.sql	(date 1536798017723)
+@@ -1,6 +1,5 @@
+ DELETE FROM user_roles;
+-DELETE
+-FROM meals;
++DELETE FROM meals;
+ DELETE FROM users;
+ ALTER SEQUENCE global_seq RESTART WITH 100000;
+ 
